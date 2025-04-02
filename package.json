@@ -1,0 +1,42 @@
+{
+    "type": "module",
+    "bin": {
+        "mcp-smart-crawler": "./build/index.js"
+    },
+    "name": "mcp-smart-crawler",
+    "version": "1.0.0",
+    "main": "./build/index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "tsc && chmod 755 build/index.js",
+        "prettierformat": "prettier --write",
+        "prettierall": "prettier --write .",
+        "lint-staged": "lint-staged"
+    },
+    "precommit": "lint-staged",
+    "lint-staged": {
+        "./src/**/*.{js,jsx,ts,tsx}": [
+            "npm run prettierformat",
+            "git add ."
+        ]
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.8.0",
+        "fs": "^0.0.1-security",
+        "path": "^0.12.7",
+        "playwright": "^1.51.1",
+        "stream": "^0.0.3",
+        "zod": "^3.24.2"
+    },
+    "devDependencies": {
+        "@types/node": "^22.13.17",
+        "lint-staged": "^15.5.0",
+        "pre-commit": "^1.2.2",
+        "prettier": "^3.5.3",
+        "typescript": "^5.8.2"
+    }
+}
