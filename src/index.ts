@@ -4,12 +4,40 @@ import { z } from 'zod'
 import { parseArgs, downloadFile, extractXhsUrl } from './helper.js'
 import * as fs from 'fs'
 import * as path from 'path'
+import { execSync } from 'child_process';
 import { chromium, Browser, Page, Response as PlaywrightResponse } from 'playwright';
 import { Writable } from 'stream'
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Ensures the required Playwright browser (Chromium) is installed.
+ * Uses execSync to run the command and pipes stdio to show progress/output.
+ */
+function ensureBrowserInstalled(): void {
+    try {
+        console.log('Checking and ensuring Playwright Chromium browser is installed...');
+        // We use 'npx playwright install ...' to ensure it finds the playwright CLI
+        // even in the temporary npx environment.
+        // 'stdio: inherit' shows the download progress directly to the user.
+        execSync('npx playwright install chromium', { stdio: 'inherit' });
+        console.log('Chromium installation check complete.');
+    } catch (error) {
+        console.error('---------------------------------------------------------');
+        console.error('Failed to install Playwright Chromium browser.');
+        console.error('Please try installing it manually by running:');
+        console.error('  npx playwright install chromium');
+        console.error('Or ensure you have network connectivity.');
+        console.error('---------------------------------------------------------');
+        // Re-throw the error or exit, as the tool cannot proceed
+        console.error('Original Error:', error);
+        process.exit(1); // Exit the process if browser setup fails
+    }
+}
+
+// 1. Ensure the browser dependency is met *before* running the main logic
+ensureBrowserInstalled();
 
 // Create server instance
 const server = new McpServer({

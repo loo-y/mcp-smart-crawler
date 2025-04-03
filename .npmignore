@@ -1,0 +1,13 @@
+# .npmignore example
+.git
+.github
+node_modules
+src/
+tsconfig.json
+.prettierrc
+*.log
+test/
+coverage/
+.*
+!LICENSE # Make sure essential files like LICENSE aren't ignored by .*
+!README.md

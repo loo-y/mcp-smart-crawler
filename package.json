@@ -4,8 +4,13 @@
         "mcp-smart-crawler": "./build/index.js"
     },
     "name": "mcp-smart-crawler",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "main": "./build/index.js",
+    "files": [
+        "build",
+        "README.md",
+        "LICENSE"
+    ],
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "tsc && chmod 755 build/index.js",
@@ -20,12 +25,28 @@
             "git add ."
         ]
     },
-    "keywords": [],
-    "author": "",
+    "keywords": [
+        "crawler",
+        "scraper",
+        "playwright",
+        "automation",
+        "web",
+        "model context protocol",
+        "mcp"
+    ],
+    "homepage": "https://github.com/loo-y/mcp-smart-crawler",
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "author": {
+        "name": "Erik",
+        "url": "https://github.com/loo-y"
+    },
     "license": "ISC",
-    "description": "",
+    "description": "A command-line tool acting as an MCP (ModelContextProtocol) server, using Playwright to crawl web content for AI models.",
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.8.0",
+        "child_process": "^1.0.2",
         "fs": "^0.0.1-security",
         "path": "^0.12.7",
         "playwright": "^1.51.1",
