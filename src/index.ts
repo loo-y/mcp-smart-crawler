@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { CallToolResult, CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { parseArgs, downloadFile, extractXhsUrl, ensureBrowserInstalled } from './helper.js'
@@ -65,6 +66,26 @@ const XhsPostSchema = z.object({
 });
 // Define the type for the return value based on the schema
 type XhsPostData = z.infer<typeof XhsPostSchema>;
+
+type ContentType = ({
+    [x: string]: unknown;
+    type: "text";
+    text: string;
+} | {
+    [x: string]: unknown;
+    data: string;
+    type: "image";
+    mimeType: string;
+} | {
+    [x: string]: unknown;
+    type: "resource";
+    resource: {
+        [x: string]: unknown;
+        text: string;
+        uri: string;
+        mimeType?: string | undefined;
+    }
+})[]
 
 server.tool(
     'get-xhs-post',
@@ -160,7 +181,7 @@ server.tool(
                     console.error(`[route handler] Fulfilling route for: ${reqUrl}`);
                     await route.fulfill({ response }); // Pass the APIResponse object back
                 } catch (error: any) {
-                    console.error(`[route handler] Error processing route for ${reqUrl}: ${error.message}`, error.stack);
+                    console.error(`[route handler] Error processing route for ${reqUrl}: ${error}`);
                     // Abort the route on error to avoid hanging the page request indefinitely
                     // Alternatively, you could try fulfilling with an error status if appropriate
                     await route.abort();
@@ -200,7 +221,7 @@ server.tool(
                        if (src) videoSourcesFound.push(src);
                   }
              } catch (metaError: any) {
-                  console.warn(`[get-xhs-post] Error extracting metadata: ${metaError.message}`);
+                  console.warn(`[get-xhs-post] Error extracting metadata: ${metaError}`);
              }
             // --- Construct result ---
             // The downloadedVideoPaths array is populated by the route handler now
@@ -227,7 +248,8 @@ server.tool(
                 console.error('[get-xhs-post] Closing browser.');
                 await browser.close();
             }
-            const contents: {type: "text", text: string}[] = []
+            
+            const contents: CallToolResult['content'] = []
             if(title){
                 contents.push({
                     type: 'text',
@@ -248,13 +270,61 @@ server.tool(
                     }).join('')}`
                 })
             }
-            if(images?.length > 0){
-                contents.push({
-                    type: 'text',
-                    text: `Post Images: ${images.map((image) => {
-                        return `\n- ${image}`
-                    }).join('')}`
-                })
+            if(images?.length > 0){                
+                for(const image of images) {
+                    let imageBase64 = undefined;
+                    // try{
+                    //     const imageName = Date.now() + '.' + 'jpeg'; // path.basename(image);
+                    //     const imagePath = path.join(downloadDir, imageName);
+                    //     // Download the image
+                    //     imageBase64 = await downloadFile(image, imagePath)
+                    // }catch(error: any){
+                    //     console.error(`Error downloading image: ${error?.message}`);
+                    // }
+
+                    const imageName = path.basename(image);
+                    const imagePath = path.join(downloadDir, imageName);
+    
+                    let imageContentInfo = `image URL: ${image};`
+
+                    const imageSaveInfo = await downloadFile(image, imagePath)
+                    imageBase64 = imageSaveInfo?.dataUri || undefined
+                    const contentType = imageSaveInfo?.contentType
+                    const errorInfo = imageSaveInfo?.error
+                    if(contentType){
+                        imageContentInfo += `Content-Type: ${contentType};`
+                    }
+
+                    if(errorInfo){
+                        // imageContentInfo += `Error: ${errorInfo};`
+                    }else if(imageBase64){
+                        imageContentInfo += `Image downloaded successfully. total size: ${imageBase64.length}; it has been saved to: ${imagePath};`
+                    }
+                    
+                    contents.push({
+                        type: 'text',
+                        text: imageContentInfo
+                    })
+                    // contents.push({
+                    //     type: "text",
+                    //     text: `Image downloaded successfully. total size: ${imageBase64 && imageBase64.length || 0}; contentType: ${contentType || ''}; some base64 data: ${imageBase64?.slice(0, 50)}...; ${errorInfo ? `Error: ${errorInfo}` : ''}`
+                    // })
+
+
+                    // if(imageBase64){
+                    //     contents.push({
+                    //         type: 'image',
+                    //         data: imageBase64,
+                    //         mimeType: contentType || 'image/webp'
+                    //         // type: 'resource',
+                    //         // resource: {
+                    //         //     blob: imageBase64,
+                    //         //     uri: image,
+                    //         //     mimeType: contentType || 'image/webp'
+                    //         // }
+                    //     })
+                    // }
+                }
             }
             if(contents.length === 0){
                 contents.push({
@@ -266,7 +336,7 @@ server.tool(
                 content: contents
             }
         } catch (error: any) {
-            console.error(`[get-xhs-post] General error during scraping: ${error.message}`, error.stack);
+            console.error(`[get-xhs-post] General error during scraping: ${error}`);
             // Cleanup
             if (browser) {
                 console.error('[get-xhs-post] Closing browser.');
@@ -276,7 +346,7 @@ server.tool(
                 content: [{
                     type: 'text',
                     // Error message
-                    text: `Get Post Error: ${error.message}`
+                    text: `Get Post Error: ${error}`
                 }]
             }
         } 

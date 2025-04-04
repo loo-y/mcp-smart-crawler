@@ -22,11 +22,35 @@ export function extractXhsUrl(shareLinkText: string): string | null {
 }
 
 // 下载文件到指定路径
-export async function downloadFile(url: string, dest: string): Promise<void> {
-    const response = await fetch(url)
-    if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.statusText}`)
-    const buffer = await response.arrayBuffer()
-    fs.writeFileSync(dest, Buffer.from(buffer))
+export async function downloadFile(url: string, dest: string): Promise<{contentType?: string, dataUri?: string, error?: string}> {
+    let contentType, dataUri, errorInfo;
+    try{
+        const response = await fetch(url)
+        if (!response.ok){
+            // throw new Error(`Failed to fetch ${url}: ${response.statusText}`)
+            console.error(`Failed to fetch ${url}: ${response.statusText}`)
+            return {
+                error: `Failed to fetch ${url}: ${response.statusText}`
+            }
+        }
+        const contentType = response.headers.get('content-type') || undefined;
+        const buffer = await response.arrayBuffer()
+        const nodeBuffer = Buffer.from(buffer)
+        fs.writeFileSync(dest, nodeBuffer)
+        // 将 Buffer 转换为 Base64 字符串
+        const base64String = nodeBuffer.toString('base64');
+        console.log(`Converted to Base64 string (length: ${base64String.length})`);
+        const dataUri = `data:${contentType};base64,${base64String}`;
+        return {contentType, dataUri: base64String};
+    }catch (error) {
+        console.error(`Error downloading file: ${error}`)
+        errorInfo = `Error downloading file: ${error}`
+    }
+    return {
+        contentType,
+        dataUri,
+        error: errorInfo
+    }
 }
 
 /**
