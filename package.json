@@ -4,7 +4,7 @@
         "mcp-smart-crawler": "./build/index.js"
     },
     "name": "mcp-smart-crawler",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "main": "./build/index.js",
     "files": [
         "build",
@@ -32,7 +32,9 @@
         "automation",
         "web",
         "model context protocol",
-        "mcp"
+        "mcp",
+        "xiaohongshu",
+        "xhs"
     ],
     "homepage": "https://github.com/loo-y/mcp-smart-crawler",
     "engines": {

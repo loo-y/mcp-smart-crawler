@@ -40,9 +40,9 @@ if (parsedArgs['download-folder']) {
     console.error(`Save folder set to: ${saveFolder}`)
 } else {
     console.error('No --download-folder specified, using default:', saveFolder)
+    saveFolder = path.join(currentFileDirectory, saveFolder)
 }
 
-saveFolder = path.join(currentFileDirectory, saveFolder)
 // 确保保存目录存在
 if (!fs.existsSync(saveFolder)) {
     fs.mkdirSync(saveFolder, { recursive: true })
