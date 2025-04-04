@@ -39,7 +39,7 @@ export async function downloadFile(url: string, dest: string): Promise<{contentT
         fs.writeFileSync(dest, nodeBuffer)
         // 将 Buffer 转换为 Base64 字符串
         const base64String = nodeBuffer.toString('base64');
-        console.log(`Converted to Base64 string (length: ${base64String.length})`);
+        console.error(`Converted to Base64 string (length: ${base64String.length})`);
         const dataUri = `data:${contentType};base64,${base64String}`;
         return {contentType, dataUri: base64String};
     }catch (error) {
@@ -59,12 +59,12 @@ export async function downloadFile(url: string, dest: string): Promise<{contentT
  */
  export function ensureBrowserInstalled(): void {
     try {
-        console.log('Checking and ensuring Playwright Chromium browser is installed...');
+        console.error('Checking and ensuring Playwright Chromium browser is installed...');
         // We use 'npx playwright install ...' to ensure it finds the playwright CLI
         // even in the temporary npx environment.
         // 'stdio: inherit' shows the download progress directly to the user.
         execSync('npx playwright install chromium', { stdio: 'inherit' });
-        console.log('Chromium installation check complete.');
+        console.error('Chromium installation check complete.');
     } catch (error) {
         console.error('---------------------------------------------------------');
         console.error('Failed to install Playwright Chromium browser.');
