@@ -1,4 +1,5 @@
 import * as fs from 'fs'
+import { execSync } from 'child_process';
 
 // 自定义参数解析函数
 export function parseArgs(args: string[]): { [key: string]: string } {
@@ -26,4 +27,29 @@ export async function downloadFile(url: string, dest: string): Promise<void> {
     if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.statusText}`)
     const buffer = await response.arrayBuffer()
     fs.writeFileSync(dest, Buffer.from(buffer))
+}
+
+/**
+ * Ensures the required Playwright browser (Chromium) is installed.
+ * Uses execSync to run the command and pipes stdio to show progress/output.
+ */
+ export function ensureBrowserInstalled(): void {
+    try {
+        console.log('Checking and ensuring Playwright Chromium browser is installed...');
+        // We use 'npx playwright install ...' to ensure it finds the playwright CLI
+        // even in the temporary npx environment.
+        // 'stdio: inherit' shows the download progress directly to the user.
+        execSync('npx playwright install chromium', { stdio: 'inherit' });
+        console.log('Chromium installation check complete.');
+    } catch (error) {
+        console.error('---------------------------------------------------------');
+        console.error('Failed to install Playwright Chromium browser.');
+        console.error('Please try installing it manually by running:');
+        console.error('  npx playwright install chromium');
+        console.error('Or ensure you have network connectivity.');
+        console.error('---------------------------------------------------------');
+        // Re-throw the error or exit, as the tool cannot proceed
+        console.error('Original Error:', error);
+        process.exit(1); // Exit the process if browser setup fails
+    }
 }

@@ -3,40 +3,16 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
-import { parseArgs, downloadFile, extractXhsUrl } from './helper.js'
+import { parseArgs, downloadFile, extractXhsUrl, ensureBrowserInstalled } from './helper.js'
+import { defaultUserAgent } from './constants.js'
 import * as fs from 'fs'
 import * as path from 'path'
-import { execSync } from 'child_process';
 import { chromium, Browser, Page, Response as PlaywrightResponse } from 'playwright';
 import { Writable } from 'stream'
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Ensures the required Playwright browser (Chromium) is installed.
- * Uses execSync to run the command and pipes stdio to show progress/output.
- */
-function ensureBrowserInstalled(): void {
-    try {
-        console.log('Checking and ensuring Playwright Chromium browser is installed...');
-        // We use 'npx playwright install ...' to ensure it finds the playwright CLI
-        // even in the temporary npx environment.
-        // 'stdio: inherit' shows the download progress directly to the user.
-        execSync('npx playwright install chromium', { stdio: 'inherit' });
-        console.log('Chromium installation check complete.');
-    } catch (error) {
-        console.error('---------------------------------------------------------');
-        console.error('Failed to install Playwright Chromium browser.');
-        console.error('Please try installing it manually by running:');
-        console.error('  npx playwright install chromium');
-        console.error('Or ensure you have network connectivity.');
-        console.error('---------------------------------------------------------');
-        // Re-throw the error or exit, as the tool cannot proceed
-        console.error('Original Error:', error);
-        process.exit(1); // Exit the process if browser setup fails
-    }
-}
 
 // 1. Ensure the browser dependency is met *before* running the main logic
 ensureBrowserInstalled();
@@ -92,13 +68,13 @@ type XhsPostData = z.infer<typeof XhsPostSchema>;
 
 server.tool(
     'get-xhs-post',
-    'Get post content, images, and download videos from Xiaohongshu (Xiaohongshu/小红书) using page.route.',
+    'Get post content, images, and download videos from Xiaohongshu (Xiaohongshu/小红书) by shark link',
     {
-        shareLinkText: z.string().describe('The share link text copied from Xiaohongshu (小红书) app or web'),
+        shareLink: z.string().describe('The share link copied from Xiaohongshu (小红书) app or web'),
     },
-    async ({ shareLinkText }) => {
+    async ({ shareLink }) => {
         const downloadDir = saveFolder; // Use the directory specified in command line args
-        console.error(`[get-xhs-post] Received share link text: "${shareLinkText}"`);
+        console.error(`[get-xhs-post] Received share link text: "${shareLink}"`);
         console.error(`[get-xhs-post] Download directory: "${downloadDir}"`);
         // 1. Ensure download directory exists
         try {
@@ -115,27 +91,26 @@ server.tool(
             }
         }
         // 2. Extract URL
-        const urlRegex = /https?:\/\/[^\s]+/g;
-        const urls = shareLinkText.match(urlRegex);
-        if (!urls || urls.length === 0) {
+        const postUrl = extractXhsUrl(shareLink)
+        if(!postUrl) {
             return {
                 content: [{
                     type: 'text',
-                    // No URL found in the input
-                    text: 'No URL found in the input'
+                    // Invalid URL
+                    text: 'Invalid Xiaohongshu share link'
                 }]
             }
         }
-        const postUrl = extractXhsUrl(shareLinkText) || urls[0];
         let browser: Browser | null = null;
         const downloadedVideoPaths: string[] = [];
         const interceptedVideoRequests: string[] = []; // For debugging routed URLs
         const videoSourcesFound: string[] = []; // For debugging <video> src attributes
+        const ua = process?.env?.ua || defaultUserAgent;
         try {
             // 3. Launch Playwright
             browser = await chromium.launch({ headless: true });
             const context = await browser.newContext({
-                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+                userAgent: ua,
                 viewport: { width: 1280, height: 800 },
                 locale: 'zh-CN',
             });
@@ -202,9 +177,9 @@ server.tool(
             // await page.waitForTimeout(5000); // Maybe less critical now
             // --- Extract metadata (Title, Description, Images) ---
              const noteContainerSelector = '#noteContainer'; // *** REPLACE ***
-             const titleSelector = '.note-title'; // *** REPLACE ***
-             const descSelector = '.note-content, .desc'; // *** REPLACE ***
-             const imageSelector = '.swiper-slide img.content-image'; // *** REPLACE ***
+             const titleSelector = '#detail-title'; // *** REPLACE ***
+             const descSelector = '#detail-desc'; // *** REPLACE ***
+             const imageSelector = '.swiper-slide img'; // *** REPLACE ***
              // ... (metadata extraction logic remains the same)
              let title = '';
              let description = '';
@@ -252,12 +227,43 @@ server.tool(
                 console.error('[get-xhs-post] Closing browser.');
                 await browser.close();
             }
-            return {
-                content: [{
+            const contents: {type: "text", text: string}[] = []
+            if(title){
+                contents.push({
                     type: 'text',
-                    // Success message
-                    text: `Success! here is the detail result:\n\n${JSON.stringify(result, null, 2)}`
-                }]
+                    text: `Post Title: ${title}`
+                })
+            }
+            if(description){
+                contents.push({
+                    type: 'text',
+                    text: `Post Description: ${description.trim()}`
+                })
+            }
+            if(downloadedVideoPaths?.length > 0){
+                contents.push({
+                    type: 'text',
+                    text: `Downloaded Videos: ${downloadedVideoPaths.map((videoPath) => {
+                        return `\n- ${videoPath}`
+                    }).join('')}`
+                })
+            }
+            if(images?.length > 0){
+                contents.push({
+                    type: 'text',
+                    text: `Post Images: ${images.map((image) => {
+                        return `\n- ${image}`
+                    }).join('')}`
+                })
+            }
+            if(contents.length === 0){
+                contents.push({
+                    type: 'text',
+                    text: `No content found in the post.`
+                })
+            }
+            return {
+                content: contents
             }
         } catch (error: any) {
             console.error(`[get-xhs-post] General error during scraping: ${error.message}`, error.stack);
@@ -270,7 +276,7 @@ server.tool(
                 content: [{
                     type: 'text',
                     // Error message
-                    text: `Error: ${error.message}`
+                    text: `Get Post Error: ${error.message}`
                 }]
             }
         } 
