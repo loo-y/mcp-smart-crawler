@@ -1,0 +1,67 @@
+# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
+# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+
+name: Publish to npm on Version Change
+
+on:
+  push:
+    branches:
+      - main # 或者你的主分支，例如 master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Build package
+        run: npm run build
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get package info
+        id: package_info
+        run: |
+          echo "pkg_name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
+          echo "local_version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Check if version exists on npm
+        id: check_npm
+        run: |
+          npm_command_output=$(npm view ${{ steps.package_info.outputs.pkg_name }}@${{ steps.package_info.outputs.local_version }} version 2>&1)
+          exit_code=$?
+          echo "Checking for version: ${{ steps.package_info.outputs.local_version }}"
+          echo "npm view output: $npm_command_output"
+          echo "npm view exit code: $exit_code"
+          if [ $exit_code -eq 0 ]; then
+            echo "Version ${{ steps.package_info.outputs.local_version }} already exists on npm. Skipping publish."
+            echo "publish=false" >> $GITHUB_OUTPUT
+          else
+            if echo "$npm_command_output" | grep -q 'E404'; then
+              echo "Version ${{ steps.package_info.outputs.local_version }} not found on npm (E404). Proceeding with publish."
+              echo "publish=true" >> $GITHUB_OUTPUT
+            else
+              echo "Error checking npm version (not E404): $npm_command_output"
+              echo "Skipping publish due to unexpected error."
+              echo "publish=false" >> $GITHUB_OUTPUT
+              # exit 1 # 取消注释以在出错时使 workflow 失败
+            fi
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - name: Publish to npm
+        if: steps.check_npm.outputs.publish == 'true'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
