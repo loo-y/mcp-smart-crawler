@@ -39,7 +39,7 @@ jobs:
           WORKING_DIR=$(pwd)
           echo "Working directory: $WORKING_DIR"
           echo "pkg_name=$(node -p "require('$WORKING_DIR/package.json').name")" >> $GITHUB_OUTPUT
-          echo "local_version=$(node -p \"require('$WORKING_DIR/package.json').version\")" >> $GITHUB_OUTPUT
+          echo "local_version=$(node -p "require('$WORKING_DIR/package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Check if version exists on npm
         id: check_npm
