@@ -25,17 +25,24 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Get package info
         id: package_info
         run: |
           # 获取当前工作目录
           echo "Current working directory: $(pwd)"
           echo "Directory contents:"
-          ls
+          ls -la
+          echo "Current directory: $(pwd)"
           cd ..
+          echo "Changed to parent directory: $(pwd)"
           ls
-          cd -
           echo "Changed back to original directory: $(pwd)"
+          cd -
+          echo "back to original directory: $(pwd)"
           echo "pkg_name=$(node -p "require('package.json').name")" >> $GITHUB_OUTPUT
           echo "local_version=$(node -p \"require('package.json').version\")" >> $GITHUB_OUTPUT
 
