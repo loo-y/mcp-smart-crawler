@@ -28,8 +28,10 @@ jobs:
       - name: Get package info
         id: package_info
         run: |
-          echo "pkg_name=$(node -p "require('../../package.json').name")" >> $GITHUB_OUTPUT
-          echo "local_version=$(node -p "require('../../package.json').version")" >> $GITHUB_OUTPUT
+          # 获取当前工作目录
+          echo $pwd
+          echo "pkg_name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
+          echo "local_version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
 
       - name: Check if version exists on npm
         id: check_npm
