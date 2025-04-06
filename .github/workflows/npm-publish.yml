@@ -36,15 +36,9 @@ jobs:
           echo "Current working directory: $(pwd)"
           echo "Directory contents:"
           ls -la
-          echo "Current directory: $(pwd)"
-          cd ..
-          echo "Changed to parent directory: $(pwd)"
-          ls
-          echo "Changed back to original directory: $(pwd)"
-          cd -
-          echo "back to original directory: $(pwd)"
-          echo "pkg_name=$(node -p "require('package.json').name")" >> $GITHUB_OUTPUT
-          echo "local_version=$(node -p \"require('package.json').version\")" >> $GITHUB_OUTPUT
+          cat ./package.json
+          echo "pkg_name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
+          echo "local_version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
 
       - name: Check if version exists on npm
         id: check_npm
