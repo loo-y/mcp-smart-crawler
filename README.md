@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/mseep-audited.png)](https://mseep.ai/app/loo-y-mcp-smart-crawler)
+
 [中文](#mcp-smart-crawler-chinese)
 
 # MCP Smart Crawler
